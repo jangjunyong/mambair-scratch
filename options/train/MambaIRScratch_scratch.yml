@@ -1,0 +1,90 @@
+name: MambaIRScratch-SIDL-scratch-dim48-V2  # 💡 V2로 이름 변경 (새로운 폴더에 독립 저장)
+model_type: SRModel
+scale: 1
+num_gpu: 1
+manual_seed: 42
+
+path:
+  root: /content/drive/MyDrive/MambaIR_experiments
+  pretrain_network_g: ~
+  strict_load_g: true
+  resume_state: ~       # 💡 0번부터 새롭게 시작
+
+datasets:
+  train:
+    name: sidl-scratch-train
+    type: PairedImageDataset
+    dataroot_gt: /content/local_dataset/train/scratch/target
+    dataroot_lq: /content/local_dataset/train/scratch/input
+    io_backend:
+      type: disk
+    gt_size: 64
+    use_hflip: true
+    use_rot: true
+    use_shuffle: true
+    num_worker_per_gpu: 2
+    batch_size_per_gpu: 4
+  val:
+    name: sidl-scratch-hard-val
+    type: PairedImageDataset
+    dataroot_gt: /content/local_dataset/val/scratch/hard/target
+    dataroot_lq: /content/local_dataset/val/scratch/hard/input
+    io_backend:
+      type: disk
+
+network_g:
+  type: MambaIRScratch
+  inp_channels: 3
+  out_channels: 3
+  dim: 48
+  num_blocks: 8
+  d_state: 16
+  d_conv: 4
+  expand: 2
+  img_range: 1.0
+
+train:
+  optim_g:
+    type: Adam
+    lr: !!float 1e-4        # 💡 과부하를 막기 위해 안정적인 속도 설정
+    weight_decay: !!float 1e-4
+    betas: [0.9, 0.999]
+  scheduler:
+    type: CosineAnnealingLR # 💡 충돌 없는 가장 안정적인 스케줄러
+    T_max: 200000
+    eta_min: !!float 1e-7
+  total_iter: 200000
+  warmup_iter: -1
+  pixel_opt:
+    type: ScratchLoss
+    loss_weight: 1.0
+    w_char: 1.0
+    w_edge: 0.1
+    w_ssim: 0.1
+    w_fft: 0.1            # 💡 V2의 핵심: 푸리에 변환 주파수 손실 활성화!
+    eps: !!float 1e-3
+
+val:
+  val_freq: !!float 2000
+  save_img: true
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 0
+      test_y_channel: false
+
+logger:
+  print_freq: 10
+  save_checkpoint_freq: !!float 2000
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+dist_params:
+  backend: nccl
+  port: 29500

@@ -1,0 +1,43 @@
+name: MambaIRScratch-SIDL-scratch-easy-test
+model_type: SRModel
+scale: 1
+num_gpu: 1
+manual_seed: 42
+path:
+  root: /content/drive/MyDrive/MambaIR/results
+  pretrain_network_g: /content/drive/MyDrive/MambaIR/experiments/MambaIRScratch-SIDL-scratch-dim48-V2/models/net_g_74000.pth
+  strict_load_g: true
+  resume_state: ~
+datasets:
+  test:
+    name: sidl-scratch-easy-test
+    type: PairedImageDataset
+    dataroot_gt: /content/drive/MyDrive/test/scratch/easy/input
+    dataroot_lq: /content/drive/MyDrive/test/scratch/easy/input
+    io_backend:
+      type: disk
+network_g:
+  type: MambaIRScratch
+  inp_channels: 3
+  out_channels: 3
+  dim: 48
+  num_blocks: 8
+  d_state: 16
+  d_conv: 4
+  expand: 2
+  img_range: 1.0
+val:
+  save_img: true
+  suffix: ~
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 0
+      test_y_channel: false
+dist_params:
+  backend: nccl
+  port: 29500

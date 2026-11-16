@@ -1,0 +1,90 @@
+name: MambaIRScratch-SIDL-scratch-dim96-V3
+model_type: SRModel
+scale: 1
+num_gpu: 1
+manual_seed: 42
+
+path:
+  root: /content/drive/MyDrive/MambaIR/experiments
+  pretrain_network_g: ~
+  strict_load_g: true
+  resume_state: /content/drive/MyDrive/MambaIR/experiments/MambaIRScratch-SIDL-scratch-dim96-V3/training_states/96000.state
+
+datasets:
+  train:
+    name: sidl-scratch-train
+    type: PairedImageDataset
+    dataroot_gt: /content/local_dataset/train/scratch/target
+    dataroot_lq: /content/local_dataset/train/scratch/input
+    io_backend:
+      type: disk
+    gt_size: 96
+    use_hflip: true
+    use_rot: true
+    use_shuffle: true
+    num_worker_per_gpu: 4
+    batch_size_per_gpu: 16
+  val:
+    name: sidl-scratch-hard-val
+    type: PairedImageDataset
+    dataroot_gt: /content/local_dataset/val/scratch/hard/target
+    dataroot_lq: /content/local_dataset/val/scratch/hard/input
+    io_backend:
+      type: disk
+
+network_g:
+  type: MambaIRScratch
+  inp_channels: 3
+  out_channels: 3
+  dim: 96
+  num_blocks: 8
+  d_state: 16
+  d_conv: 4
+  expand: 2
+  img_range: 1.0
+
+train:
+  optim_g:
+    type: Adam
+    lr: !!float 2e-5
+    weight_decay: !!float 0
+    betas: [0.9, 0.999]
+  scheduler:
+    type: CosineAnnealingLR
+    T_max: 100000
+    eta_min: !!float 1e-7
+  total_iter: 100000
+  warmup_iter: 5000
+  pixel_opt:
+    type: ScratchLoss
+    loss_weight: 1.0
+    w_char: 1.0
+    w_edge: 0.2
+    w_ssim: 0.1
+    w_fft: 0.0001
+    eps: !!float 1e-3
+
+val:
+  val_freq: !!float 10000
+  save_img: false
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 00
+      test_y_channel: false
+
+logger:
+  print_freq: 100
+  save_checkpoint_freq: !!float 2000
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+dist_params:
+  backend: nccl
+  port: 29500
